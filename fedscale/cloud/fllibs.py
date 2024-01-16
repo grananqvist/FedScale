@@ -16,6 +16,32 @@ from fedscale.utils.models.tensorflow_model_provider import get_tensorflow_model
 
 tokenizer = None
 
+import torch.nn as nn
+import torch
+class NetRamsay(nn.Module):
+    def __init__(self):
+        super(NetRamsay, self).__init__()
+        input_shape = (32, 32, 3)
+        num_outputs = 10
+        in_channels = input_shape[-1]
+        maxpool_output_size = (input_shape[0] - 4) // 2
+        flatten_size = maxpool_output_size * maxpool_output_size * 64
+
+        self.net = nn.Sequential(*[
+            nn.Conv2d(in_channels, 32, kernel_size=(3, 3)),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=(3, 3)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Flatten(),
+            nn.Linear(flatten_size, 128),
+            nn.ReLU(),
+            nn.Linear(128, num_outputs),
+        ])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.net(x)
+        return x
 
 def import_libs():
     global tokenizer
@@ -202,6 +228,11 @@ def init_model():
         elif parser.args.model_zoo == "fedscale-tensorflow-zoo":
             assert parser.args.engine == commons.TENSORFLOW
             model = get_tensorflow_model(parser.args.model, parser.args)
+        elif parser.args.model == 'ramsay':
+  
+            print('initializing PFL benchmark model')
+            model = NetRamsay()
+
         else:
             if parser.args.model_zoo == "fedscale-torch-zoo":
                 if parser.args.task == "cv":

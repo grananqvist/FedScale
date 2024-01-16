@@ -39,6 +39,7 @@ def load_yaml_conf(yaml_file):
 
 def process_cmd(yaml_file, local=False):
 
+    start_time_total = time.perf_counter()
     yaml_conf = load_yaml_conf(yaml_file)
 
     if 'use_container' in yaml_conf:
@@ -70,6 +71,7 @@ def process_cmd(yaml_file, local=False):
     time_stamp = datetime.datetime.fromtimestamp(
         time.time()).strftime('%m%d_%H%M%S')
     running_vms = set()
+    running_processes = []
     job_name = 'fedscale_job'
     log_path = './logs'
     submit_user = f"{yaml_conf['auth']['ssh_user']}@" if len(yaml_conf['auth']['ssh_user']) else ""
@@ -122,12 +124,13 @@ def process_cmd(yaml_file, local=False):
         print(f"Starting aggregator on {ps_ip}...")
         ps_cmd = f" python {yaml_conf['exp_path']}/{yaml_conf['aggregator_entry']} {conf_script} --this_rank=0 --num_executors={total_gpu_processes} --executor_configs={executor_configs} "
 
-    with open(f"{job_name}_logging", 'wb') as fout:
+    with open(os.path.join(log_path, f"{job_name}_logging"), 'wb') as fout:
         pass
 
-    with open(f"{job_name}_logging", 'a') as fout:
+    with open(os.path.join(log_path, f"{job_name}_logging"), 'a') as fout:
         if local:
             local_process = subprocess.Popen(f'{ps_cmd}', shell=True, stdout=fout, stderr=fout)
+            running_processes.append(local_process)
             local_pid = local_process.pid
             print(f'Aggregator local PID {local_pid}. Run kill -9 {local_pid} to kill the job.')
         else:
@@ -164,8 +167,8 @@ def process_cmd(yaml_file, local=False):
                 with open(f"{job_name}_logging", 'a') as fout:
                     time.sleep(2)
                     if local:
-                        subprocess.Popen(f'{worker_cmd}',
-                                         shell=True, stdout=fout, stderr=fout)
+                        running_processes.append(subprocess.Popen(f'{worker_cmd}',
+                                         shell=True, stdout=fout, stderr=fout))
                     else:
                         subprocess.Popen(f'ssh {submit_user}{worker} "{setup_cmd} {worker_cmd}"',
                                          shell=True, stdout=fout, stderr=fout)
@@ -242,8 +245,15 @@ def process_cmd(yaml_file, local=False):
                 break
 
 
+    start_time_simulation = time.perf_counter()
     print(f"Submitted job, please check your logs {job_conf['log_path']}/logs/{job_conf['job_name']}/{time_stamp} for status")
     print(f"if you cannot find logs directory on the path, you need to check ""{job_name}_logging"" log file under FEDSCALE root directory.")
+    for p in running_processes:
+        p.wait()
+
+    end_time = time.perf_counter()
+    print("Total simulation time (s):", end_time - start_time_simulation)
+    print("Total time (s):", end_time - start_time_total)
 
 
 def terminate(job_name):
