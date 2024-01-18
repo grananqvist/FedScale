@@ -100,6 +100,7 @@ def process_cmd(yaml_file, local=False):
             log_path = os.path.join(
                 job_conf[conf_name], 'log', job_name, time_stamp)
 
+    os.makedirs(log_path, exist_ok=True)
     total_gpu_processes = sum([sum(x) for x in total_gpus])
 
     # error checking
