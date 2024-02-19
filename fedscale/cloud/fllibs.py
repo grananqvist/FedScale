@@ -18,9 +18,9 @@ tokenizer = None
 
 import torch.nn as nn
 import torch
-class NetRamsay(nn.Module):
+class SimpleCNN(nn.Module):
     def __init__(self):
-        super(NetRamsay, self).__init__()
+        super(SimpleCNN, self).__init__()
         input_shape = (32, 32, 3)
         num_outputs = 10
         in_channels = input_shape[-1]
@@ -228,10 +228,10 @@ def init_model():
         elif parser.args.model_zoo == "fedscale-tensorflow-zoo":
             assert parser.args.engine == commons.TENSORFLOW
             model = get_tensorflow_model(parser.args.model, parser.args)
-        elif parser.args.model == 'ramsay':
+        elif parser.args.model == 'pfl-research':
   
             print('initializing PFL benchmark model')
-            model = NetRamsay()
+            model = SimpleCNN()
 
         else:
             if parser.args.model_zoo == "fedscale-torch-zoo":
